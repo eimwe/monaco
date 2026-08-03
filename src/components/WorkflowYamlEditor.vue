@@ -24,7 +24,6 @@ const emit = defineEmits<{
 }>()
 
 const editorHost = ref<HTMLDivElement | null>(null)
-const completionProvider = shallowRef<monaco.IDisposable | null>(null)
 const editor = shallowRef<monaco.editor.IStandaloneCodeEditor | null>(null)
 const monacoYaml = shallowRef<monaco.IDisposable | null>(null)
 const markerListener = shallowRef<monaco.IDisposable | null>(null)
@@ -38,81 +37,6 @@ const statusTone = computed(() => {
   if (problemCount.value === 0) return 'ok'
   return 'err'
 })
-
-function registerGithubActionsCompletions() {
-  const rootKeys = [
-    'name',
-    'run-name',
-    'on',
-    'env',
-    'defaults',
-    'permissions',
-    'concurrency',
-    'jobs',
-  ]
-  const eventKeys = ['push', 'pull_request', 'workflow_dispatch', 'schedule', 'release']
-  const jobKeys = ['name', 'runs-on', 'needs', 'if', 'permissions', 'env', 'strategy', 'steps']
-  const stepKeys = ['name', 'id', 'if', 'uses', 'run', 'shell', 'with', 'env', 'working-directory']
-  const runners = [
-    'ubuntu-latest',
-    'ubuntu-24.04',
-    'ubuntu-22.04',
-    'windows-latest',
-    'macos-latest',
-  ]
-  const actions = ['actions/checkout@v4', 'actions/setup-node@v4', 'actions/cache@v4']
-
-  function suggestions(values: string[], range: monaco.IRange, suffix = ': ') {
-    return values.map((value) => ({
-      label: value,
-      kind: monaco.languages.CompletionItemKind.Property,
-      insertText: `${value}${suffix}`,
-      range,
-    }))
-  }
-
-  return monaco.languages.registerCompletionItemProvider('yaml', {
-    triggerCharacters: [' ', ':', '-'],
-    provideCompletionItems(model, position) {
-      const line = model.getLineContent(position.lineNumber)
-      const word = model.getWordUntilPosition(position)
-      const range = new monaco.Range(
-        position.lineNumber,
-        word.startColumn,
-        position.lineNumber,
-        word.endColumn,
-      )
-
-      const indent = line.match(/^\s*/)?.[0].length ?? 0
-
-      if (/runs-on:\s*$/.test(line)) {
-        return { suggestions: suggestions(runners, range, '') }
-      }
-
-      if (/uses:\s*$/.test(line)) {
-        return { suggestions: suggestions(actions, range, '') }
-      }
-
-      if (/^\s*-\s*$/.test(line)) {
-        return { suggestions: suggestions(stepKeys, range) }
-      }
-
-      if (indent === 0) {
-        return { suggestions: suggestions(rootKeys, range) }
-      }
-
-      if (indent === 2) {
-        return { suggestions: suggestions(eventKeys, range) }
-      }
-
-      if (indent === 4) {
-        return { suggestions: suggestions(jobKeys, range) }
-      }
-
-      return { suggestions: suggestions(stepKeys, range) }
-    },
-  })
-}
 
 onMounted(() => {
   if (!editorHost.value) return
@@ -131,8 +55,6 @@ onMounted(() => {
       },
     ],
   }) as unknown as monaco.IDisposable
-
-  completionProvider.value = registerGithubActionsCompletions()
 
   const model = monaco.editor.getModel(modelUri) ?? monaco.editor.createModel('', 'yaml', modelUri)
 
@@ -237,7 +159,6 @@ function triggerSuggest() {
 defineExpose({ formatDocument, triggerSuggest })
 
 onBeforeUnmount(() => {
-  completionProvider.value?.dispose()
   markerListener.value?.dispose()
   editor.value?.dispose()
   monacoYaml.value?.dispose()
@@ -283,7 +204,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div ref="editorHost" class="h-[520px] w-full" />
+    <div ref="editorHost" class="h-130 w-full" />
 
     <div
       class="flex items-center justify-between border-t border-line bg-canvas-subtle px-4 py-1.5 font-mono text-[11px] text-slate-400"
