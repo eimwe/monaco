@@ -13,4 +13,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  worker: {
+    format: 'es',
+  },
+  optimizeDeps: {
+    include: ['monaco-editor', 'monaco-yaml'],
+  },
 })
